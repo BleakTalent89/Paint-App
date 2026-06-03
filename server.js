@@ -3,8 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import OpenAI from 'openai'
-import fs from 'fs'
+import OpenAI, { toFile } from 'openai'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -96,22 +95,19 @@ Paint it as a professional Warhammer 40K painter would: thin coats, smooth blend
     // Try images.edit first if we have an image (img2img)
     if (imageUrl) {
       try {
+        const mimeMatch = imageUrl.match(/^data:(image\/\w+);base64,/)
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/png'
         const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, '')
         const imgBuffer = Buffer.from(base64Data, 'base64')
-
-        // Write temp file for the API
-        const tmpPath = join(__dirname, '_tmp_input.png')
-        fs.writeFileSync(tmpPath, imgBuffer)
+        const imageFile = await toFile(imgBuffer, 'miniature.png', { type: mimeType })
 
         const editResponse = await openai.images.edit({
           model: 'gpt-image-1',
-          image: fs.createReadStream(tmpPath),
+          image: imageFile,
           prompt,
           n: 1,
           size: '1024x1024',
         })
-
-        fs.unlinkSync(tmpPath)
 
         const imageData = editResponse.data[0]
         if (imageData.b64_json) {
