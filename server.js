@@ -76,15 +76,20 @@ app.post('/api/generate-preview', async (req, res) => {
     if (!colorScheme) return res.status(400).json({ error: 'colorScheme is required' })
 
     // Build color scheme description
-    const colorLines = Object.entries(colorScheme)
-      .map(([region, color]) => `- ${region}: ${color}`)
-      .join('\n')
+    const colorLines = Array.isArray(colorScheme)
+      ? colorScheme.map(c => `- ${c.region}: ${c.color_name || c.color}`).join('\n')
+      : Object.entries(colorScheme).map(([region, color]) => `- ${region}: ${color}`).join('\n')
 
-    const prompt = `A professionally painted Warhammer 40K miniature. ${modelDescription || 'Space Marine miniature'}.
-Paint scheme:
-${colorLines}
+    const colorSchemeList = Array.isArray(colorScheme)
+      ? colorScheme.map(c => `- ${c.region}: ${c.color_name || c.color}`).join('\n')
+      : colorLines
 
-The miniature should look like a high-quality painted tabletop miniature with shading and highlights. Studio photography style, dark background, dramatic lighting. Highly detailed, photorealistic miniature painting.`
+    const prompt = `This is an image of an unpainted plastic miniature model. Keep the exact same miniature, same pose, same angle, same background, same lighting, same composition. Do NOT change the shape, form, or structure of the miniature in any way. Only add paint colors to the model.
+
+Apply this exact paint scheme:
+${colorSchemeList}
+
+Paint it as a professional Warhammer 40K painter would: thin coats, smooth blending, edge highlights on raised surfaces, subtle shading in recesses. The result should look like the exact same physical miniature photographed after being painted. Photorealistic tabletop miniature painting.`
 
     let resultUrl = null
 
